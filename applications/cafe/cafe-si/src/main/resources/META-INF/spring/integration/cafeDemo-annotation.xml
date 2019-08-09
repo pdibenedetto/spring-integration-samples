@@ -17,6 +17,9 @@
 
 	<context:component-scan base-package="org.springframework.integration.samples.cafe.annotation"/>
 
+	<!--
+	MessagingGateway
+	-->
 	<int:gateway id="cafe" service-interface="org.springframework.integration.samples.cafe.Cafe"/>
 
 	<int:channel id="orders"/>

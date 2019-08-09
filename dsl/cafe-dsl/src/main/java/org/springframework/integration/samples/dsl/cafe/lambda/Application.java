@@ -80,44 +80,44 @@ public class Application {
 	@Bean
 	public IntegrationFlow orders() {
 		return f -> f
-				.split(Order.class, Order::getItems)
-				.channel(c -> c.executor(Executors.newCachedThreadPool()))
-				.<OrderItem, Boolean>route(OrderItem::isIced, mapping -> mapping
-						.subFlowMapping(true, sf -> sf
-								.channel(c -> c.queue(10))
-								.publishSubscribeChannel(c -> c
-										.subscribe(s -> s.handle(m -> sleepUninterruptibly(1, TimeUnit.SECONDS)))
-										.subscribe(sub -> sub
-												.<OrderItem, String>transform(p ->
-														Thread.currentThread().getName() +
-																" prepared cold drink #" +
-																this.coldDrinkCounter.incrementAndGet() +
-																" for order #" + p.getOrderNumber() + ": " + p)
-												.handle(m -> System.out.println(m.getPayload())))))
-						.subFlowMapping(false, sf -> sf
-								.channel(c -> c.queue(10))
-								.publishSubscribeChannel(c -> c
-										.subscribe(s -> s.handle(m -> sleepUninterruptibly(5, TimeUnit.SECONDS)))
-										.subscribe(sub -> sub
-												.<OrderItem, String>transform(p ->
-														Thread.currentThread().getName() +
-																" prepared hot drink #" +
-																this.hotDrinkCounter.incrementAndGet() +
-																" for order #" + p.getOrderNumber() + ": " + p)
-												.handle(m -> System.out.println(m.getPayload())))))
-						.defaultOutputToParentFlow())
-				.<OrderItem, Drink>transform(orderItem ->
-						new Drink(orderItem.getOrderNumber(),
-								orderItem.getDrinkType(),
-								orderItem.isIced(),
-								orderItem.getShots()))
-				.aggregate(aggregator -> aggregator
-						.outputProcessor(g ->
-								new Delivery(g.getMessages()
-										.stream()
-										.map(message -> (Drink) message.getPayload())
-										.collect(Collectors.toList())))
-						.correlationStrategy(m -> ((Drink) m.getPayload()).getOrderNumber()))
+			.split(Order.class, Order::getItems)
+			.channel(c -> c.executor(Executors.newCachedThreadPool()))
+			.<OrderItem, Boolean>route(OrderItem::isIced, mapping -> mapping
+					.subFlowMapping(true, sf -> sf
+							.channel(c -> c.queue(10))
+							.publishSubscribeChannel(c -> c
+									.subscribe(s -> s.handle(m -> sleepUninterruptibly(1, TimeUnit.SECONDS)))
+									.subscribe(sub -> sub
+											.<OrderItem, String>transform(p ->
+													Thread.currentThread().getName() +
+															" prepared cold drink #" +
+															this.coldDrinkCounter.incrementAndGet() +
+															" for order #" + p.getOrderNumber() + ": " + p)
+											.handle(m -> System.out.println(m.getPayload())))))
+					.subFlowMapping(false, sf -> sf
+							.channel(c -> c.queue(10))
+							.publishSubscribeChannel(c -> c
+									.subscribe(s -> s.handle(m -> sleepUninterruptibly(5, TimeUnit.SECONDS)))
+									.subscribe(sub -> sub
+											.<OrderItem, String>transform(p ->
+													Thread.currentThread().getName() +
+															" prepared hot drink #" +
+															this.hotDrinkCounter.incrementAndGet() +
+															" for order #" + p.getOrderNumber() + ": " + p)
+											.handle(m -> System.out.println(m.getPayload())))))
+					.defaultOutputToParentFlow())
+			.<OrderItem, Drink>transform(orderItem ->
+					new Drink(orderItem.getOrderNumber(),
+							orderItem.getDrinkType(),
+							orderItem.isIced(),
+							orderItem.getShots()))
+			.aggregate(aggregator -> aggregator
+					.outputProcessor(g ->
+							new Delivery(g.getMessages()
+									.stream()
+									.map(message -> (Drink) message.getPayload())
+									.collect(Collectors.toList())))
+					.correlationStrategy(m -> ((Drink) m.getPayload()).getOrderNumber()))
 				.handle(CharacterStreamWritingMessageHandler.stdout());
 	}
 
